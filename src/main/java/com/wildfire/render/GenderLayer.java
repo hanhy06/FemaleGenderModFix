@@ -20,6 +20,8 @@ package com.wildfire.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.wildfire.compat.skinlayers.BreastWearRenderer;
+import com.wildfire.compat.skinlayers.BreastWearRenderers;
 import com.wildfire.api.IGenderArmor;
 import com.wildfire.main.WildfireGender;
 import com.wildfire.main.WildfireHelper;
@@ -39,6 +41,7 @@ import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.client.renderer.entity.state.HumanoidRenderState;
 import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.ARGB;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
@@ -64,6 +67,7 @@ public class GenderLayer<S extends HumanoidRenderState, M extends HumanoidModel<
         prevLeftBreastOverlayUVLayout, prevRightBreastOverlayUVLayout;
 
     private final RenderLayerParent<S, M> context;
+    private final BreastWearRenderer breastWearRenderer = BreastWearRenderers.create();
 
     private boolean isUniboob;
     // although ItemStack instances are mutable, this is safe to keep a reference to as this is a copy of the real stack
@@ -207,11 +211,9 @@ public class GenderLayer<S extends HumanoidRenderState, M extends HumanoidModel<
             matrixStack.translate(0f, 0.75f, 0f);
         }
 
+        model.root().translateAndRotate(matrixStack);
         ModelPart body = model.body;
-        matrixStack.translate(body.x * 0.0625f, body.y * 0.0625f, body.z * 0.0625f);
-        if(body.zRot != 0.0F || body.yRot != 0.0F || body.xRot != 0.0F) {
-            matrixStack.mulPose(new Quaternionf().rotationZYX(body.zRot, body.yRot, body.xRot));
-        }
+        body.translateAndRotate(matrixStack);
 
         if(bounceEnabled) {
             matrixStack.translate((side.isLeft ? lPhysPositionX : rPhysPositionX) / 32f, 0, 0);
@@ -270,7 +272,12 @@ public class GenderLayer<S extends HumanoidRenderState, M extends HumanoidModel<
             matrixStack.translate(0, 0, -0.015f);
             matrixStack.scale(1.05f, 1.05f, 1.05f);
             var jacketModel = side.isLeft ? lBreastWear : rBreastWear;
-            queue.submitCustomGeometry(matrixStack, renderLayer, new BreastRenderCommand(jacketModel, state, overlay, color));
+            GenderRenderState genderState = GenderRenderState.get(state);
+            if(genderState == null) return;
+
+            UVLayout uvLayout = side.isLeft ? genderState.leftBreastOverlayUVLayout : genderState.rightBreastOverlayUVLayout;
+            Identifier skinTexture = playerState.skin.body().texturePath();
+            breastWearRenderer.render(matrixStack, queue, renderLayer, state, overlay, color, side, jacketModel, uvLayout, skinTexture);
         }
     }
 

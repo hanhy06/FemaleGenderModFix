@@ -54,9 +54,11 @@
         "java": ">=25"
     },
     "conflicts": {
-        "skinlayers": "*",
         "essential": "*",
         "essential-loader": "*"
+    },
+    "suggests": {
+        "skinlayers3d": "*"
     },
     "custom": {
         "modmenu": {
